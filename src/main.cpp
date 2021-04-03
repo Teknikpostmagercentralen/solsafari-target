@@ -1,5 +1,10 @@
 #include <Arduino.h>
 
+#include <ESP8266HTTPClient.h>
+#include <ESP8266WiFi.h>
+
+#include <ArduinoJson.h>
+
 #include <IRremoteESP8266.h>
 #include <IRrecv.h>
 #include <IRutils.h>
@@ -15,11 +20,23 @@ decode_results results;
 
 int myIndex = 0;
 
+unsigned long timestamp = 0;
+
 void setup() {
   Serial.begin(9600);
   irrecv.enableIRIn();  // Start the receiver
   while (!Serial)  // Wait for the serial connection to be establised.
     delay(50);
+  
+  WiFi.begin("SAFARIFI", "SolStorm");   //WiFi connection WIFI Admin: SolStorm
+ 
+  while (WiFi.status() != WL_CONNECTED) {  //Wait for the WiFI connection completion
+ 
+    delay(500);
+    Serial.println("Waiting for connection");
+ 
+  }
+
   Serial.println();
   Serial.print("IRrecvDemo is now running and waiting for IR message on Pin ");
   Serial.println(kRecvPin);
@@ -37,5 +54,40 @@ void loop() {
     // How to print debug information
     //serialPrintUint64(results.command, HEX);
     irrecv.resume();  // Receive the next value
+  }
+
+  if (millis()-timestamp > 2000) {
+    Serial.println();
+    if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
+ 
+      HTTPClient http;    //Declare object of class HTTPClient
+  
+      http.begin("http://192.168.0.198:5000/point/");      //Specify request destination
+      http.addHeader("Content-Type", "application/json");  //Specify content-type header
+
+      String json = "";
+      StaticJsonDocument<16> doc;
+
+      doc["hits"] = myIndex;
+      myIndex = 0;
+
+      serializeJson(doc, json);
+  
+      Serial.println(json);   //Print HTTP return code
+  
+      int httpCode = http.POST(json);   //Send the request
+      String payload = http.getString();                  //Get the response payload
+
+      Serial.println(httpCode);   //Print HTTP return code
+      Serial.println(payload);    //Print request response payload
+  
+      http.end();  //Close connection
+  
+    } else {
+  
+      Serial.println("Error in WiFi connection");
+  
+    }
+    timestamp = millis();
   }
 }
