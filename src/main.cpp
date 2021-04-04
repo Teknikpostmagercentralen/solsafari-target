@@ -9,6 +9,15 @@
 #include <IRrecv.h>
 #include <IRutils.h>
 
+#include "SerialMP3Player.h"
+
+#define MP3_TX 14
+#define MP3_RX 12
+
+#define POST_INTERVAL 2000 // Wait between
+
+SerialMP3Player mp3(MP3_RX,MP3_TX);
+
 // An IR detector/demodulator is connected to GPIO pin 14(D5 on a NodeMCU
 // board).
 // Note: GPIO 16 won't work on the ESP8266 as it does not have interrupts.
@@ -40,6 +49,12 @@ void setup() {
   Serial.println();
   Serial.print("IRrecvDemo is now running and waiting for IR message on Pin ");
   Serial.println(kRecvPin);
+
+  //Start Mp3 lib
+  mp3.begin(9600);        // start mp3-communication
+  delay(500);             // wait for init
+  mp3.sendCommand(CMD_SEL_DEV, 0, 2);   //select sd-card
+  delay(500);             // wait for init
 }
 
 void loop() {
@@ -50,6 +65,7 @@ void loop() {
     if (kommando == 0x1D && type == RC5) {
       Serial.println(myIndex);
       myIndex++;
+      mp3.play(1);
     }
     // How to print debug information
     //serialPrintUint64(results.command, HEX);
