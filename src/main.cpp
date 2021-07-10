@@ -16,16 +16,22 @@
 
 #define POST_INTERVAL 2000 // Wait between
 
+#define kRecvPin 5
+#define kRecvPin2 4
+
+
 SerialMP3Player mp3(MP3_RX,MP3_TX);
 
 // An IR detector/demodulator is connected to GPIO pin 14(D5 on a NodeMCU
 // board).
 // Note: GPIO 16 won't work on the ESP8266 as it does not have interrupts.
-const uint16_t kRecvPin = 5;
+
 
 IRrecv irrecv(kRecvPin);
+IRrecv irrecv2(kRecvPin2);
 
 decode_results results;
+decode_results results2;
 
 int myIndex = 0;
 
@@ -57,14 +63,25 @@ void setup() {
   delay(500);             // wait for init
 }
 
+void bang(){
+  Serial.println(myIndex);
+  myIndex++;
+
+
+}
+
 void loop() {
+
+  boolean reading1 = false;
+  boolean reading2 = false;
+
+
   if (irrecv.decode(&results)) {
     // print() & println() can't handle printing long longs. (uint64_t)
     uint32_t kommando = results.command;
     decode_type_t type = results.decode_type;
     if (kommando == 0x1D && type == RC5) {
-      Serial.println(myIndex);
-      myIndex++;
+      reading1 = true;
       mp3.play(1);
     }
     // How to print debug information
@@ -72,13 +89,27 @@ void loop() {
     irrecv.resume();  // Receive the next value
   }
 
+if (irrecv2.decode(&results2)) {
+    uint32_t kommando2 = results.command;
+    decode_type_t type2 = results.decode_type;
+    if (kommando2 == 0x1D && type2 == RC5) {
+      reading1 = true;
+      mp3.play(1);
+    }
+    irrecv2.resume();  // Receive the next value
+  }
+
+  if(reading1 | reading2) bang();
+
   if (millis()-timestamp > 2000) {
     Serial.println();
     if (WiFi.status() == WL_CONNECTED) { //Check WiFi connection status
  
-      HTTPClient http;    //Declare object of class HTTPClient
+      HTTPClient http;    //Declare object of class HTTPClient 
+      WiFiClient client;
+
   
-      http.begin("http://192.168.0.198:5000/point/");      //Specify request destination
+      http.begin(client, "http://192.168.0.198:5000/point/");      //Specify request destination
       http.addHeader("Content-Type", "application/json");  //Specify content-type header
 
       String json = "";
