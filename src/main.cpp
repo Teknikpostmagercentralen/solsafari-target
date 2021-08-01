@@ -11,13 +11,17 @@
 
 #include "SerialMP3Player.h"
 
-#define MP3_TX 14
-#define MP3_RX 12
+#define MP3_TX 12
+#define MP3_RX 13
 
 #define POST_INTERVAL 2000 // Wait between
 
-#define kRecvPin 5
-#define kRecvPin2 4
+#define kRecvPin 4
+#define kRecvPin2 14
+
+#define RED_PIN 0
+#define GREEN_PIN 4
+#define BLUE_PIN 5
 
 
 SerialMP3Player mp3(MP3_RX,MP3_TX);
@@ -39,7 +43,12 @@ unsigned long timestamp = 0;
 
 void setup() {
   Serial.begin(9600);
+
   irrecv.enableIRIn();  // Start the receiver
+  irrecv2.enableIRIn();  // Start the receiver
+  pinMode(kRecvPin, INPUT);
+  pinMode(kRecvPin2, INPUT);
+  
   while (!Serial)  // Wait for the serial connection to be establised.
     delay(50);
   
@@ -53,8 +62,11 @@ void setup() {
   }
 
   Serial.println();
-  Serial.print("IRrecvDemo is now running and waiting for IR message on Pin ");
-  Serial.println(kRecvPin);
+  Serial.print("IRrecv Target is now running and waiting for IR message on Pin ");
+  Serial.print(kRecvPin);
+  Serial.print("+");
+  Serial.print(kRecvPin2);
+  
 
   //Start Mp3 lib
   mp3.begin(9600);        // start mp3-communication
@@ -66,8 +78,6 @@ void setup() {
 void bang(){
   Serial.println(myIndex);
   myIndex++;
-
-
 }
 
 void loop() {
@@ -76,24 +86,11 @@ void loop() {
   boolean reading2 = false;
 
 
-  if (irrecv.decode(&results)) {
-    // print() & println() can't handle printing long longs. (uint64_t)
-    uint32_t kommando = results.command;
-    decode_type_t type = results.decode_type;
-    if (kommando == 0x1D && type == RC5) {
-      reading1 = true;
-      mp3.play(1);
-    }
-    // How to print debug information
-    //serialPrintUint64(results.command, HEX);
-    irrecv.resume();  // Receive the next value
-  }
-
 if (irrecv2.decode(&results2)) {
-    uint32_t kommando2 = results.command;
-    decode_type_t type2 = results.decode_type;
+    uint32_t kommando2 = results2.command;
+    decode_type_t type2 = results2.decode_type;
     if (kommando2 == 0x1D && type2 == RC5) {
-      reading1 = true;
+      reading2 = true;
       mp3.play(1);
     }
     irrecv2.resume();  // Receive the next value
@@ -120,13 +117,13 @@ if (irrecv2.decode(&results2)) {
 
       serializeJson(doc, json);
   
-      Serial.println(json);   //Print HTTP return code
+      //Serial.println(json);   //Print HTTP return code
   
       int httpCode = http.POST(json);   //Send the request
       String payload = http.getString();                  //Get the response payload
 
-      Serial.println(httpCode);   //Print HTTP return code
-      Serial.println(payload);    //Print request response payload
+      //Serial.println(httpCode);   //Print HTTP return code
+      //Serial.println(payload);    //Print request response payload
   
       http.end();  //Close connection
   
