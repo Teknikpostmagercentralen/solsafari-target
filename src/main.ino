@@ -23,7 +23,7 @@
 #define ORANGE_CODE 0x1F
 #define BLUE_CODE 0x1D
 
-#define BLINK_DELAY 3000
+#define BLINK_DELAY 500
 
 SerialMP3Player mp3(MP3_RX, MP3_TX);
 
@@ -43,7 +43,6 @@ unsigned long timestamp = 0;
 
 long redTimestamp = 0;
 long greenTimestamp = 0;
-long blueTimestamp = 0;
 
 void setup() {
     Serial.begin(9600);
@@ -90,21 +89,22 @@ void checkWifiConnectionBlocking() {
         LOW);  // Set blue pin low so its disabled no matter where it ended
 }
 
-void bang() { mp3.play(1); }
+void bang() {
+    mp3.play(1);
+    blinkGreen();
+}
 
 void blinkRed() {}
 
-void blinkBlue() {
-    digitalWrite(BLUE_PIN, HIGH);
-    blueTimestamp = millis();
+void blinkGreen() {
+    digitalWrite(GREEN_PIN, HIGH);
+    greenTimestamp = millis();
 }
-
-void blinkGreen() {}
 
 void updateLED() {
     long current = millis();
-    if (current - blueTimestamp > BLINK_DELAY) {
-        digitalWrite(BLUE_PIN, LOW);
+    if ((current - greenTimestamp) > BLINK_DELAY) {
+        digitalWrite(GREEN_PIN, LOW);
     }
 }
 
@@ -158,4 +158,5 @@ void loop() {
         }
         timestamp = millis();
     }
+    updateLED();
 }
