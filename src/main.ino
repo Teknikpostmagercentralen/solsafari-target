@@ -5,15 +5,16 @@
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
 #include <IRutils.h>
-
 #include "SerialMP3Player.h"
+
+#define NO_SERIALMP3_DELAY //disable delays in mp3 SerialMP3Player library
 
 #define MP3_TX 12
 #define MP3_RX 13
 
 #define POST_INTERVAL 2000  // Wait between
 
-#define kRecvPin 4
+
 #define kRecvPin2 14
 
 #define RED_PIN 0
@@ -31,7 +32,6 @@ SerialMP3Player mp3(MP3_RX, MP3_TX);
 // board).
 // Note: GPIO 16 won't work on the ESP8266 as it does not have interrupts.
 
-IRrecv irrecv(kRecvPin);
 IRrecv irrecv2(kRecvPin2);
 
 decode_results results;
@@ -48,9 +48,7 @@ long greenTimestamp = 0;
 void setup() {
     Serial.begin(9600);
 
-    irrecv.enableIRIn();   // Start the receiver
     irrecv2.enableIRIn();  // Start the receiver
-    pinMode(kRecvPin, INPUT);
     pinMode(kRecvPin2, INPUT);
     pinMode(RED_PIN, OUTPUT);
     pinMode(BLUE_PIN, OUTPUT);
@@ -66,8 +64,7 @@ void setup() {
     Serial.println();
     Serial.print(
         "IRrecv Target is now running and waiting for IR message on Pin ");
-    Serial.print(kRecvPin);
-    Serial.print("+");
+
     Serial.print(kRecvPin2);
 
     // Start Mp3 lib
@@ -126,7 +123,7 @@ void loop() {
         irrecv2.resume();  // Receive the next value
     }
 
-    if (millis() - timestamp > 2000) {
+    if (millis() - timestamp > 10000) {
         if (WiFi.status() == WL_CONNECTED) {  // Check WiFi connection status
 
             HTTPClient http;  // Declare object of class HTTPClient
@@ -139,7 +136,7 @@ void loop() {
                            "application/json");  // Specify content-type header
 
             String json = "";
-            StaticJsonDocument<16> doc;
+            StaticJsonDocument<200> doc;
 
             doc["orangeHits"] = orangeHits;
             doc["blueHits"] = blueHits;
