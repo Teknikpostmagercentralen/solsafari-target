@@ -37,7 +37,8 @@ IRrecv irrecv2(kRecvPin2);
 decode_results results;
 decode_results results2;
 
-int myIndex = 0;
+int orangeHits = 0;
+int blueHits = 0;
 
 unsigned long timestamp = 0;
 
@@ -115,9 +116,11 @@ void loop() {
         if (type2 == RC5) {
             if (kommando2 == BLUE_CODE) {
                 bang();
+                blueHits++;
             }
             if (kommando2 == ORANGE_CODE) {
                 bang();
+                orangeHits++;
             }
         }
         irrecv2.resume();  // Receive the next value
@@ -138,8 +141,8 @@ void loop() {
             String json = "";
             StaticJsonDocument<16> doc;
 
-            doc["hits"] = myIndex;
-            myIndex = 0;
+            doc["orangeHits"] = orangeHits;
+            doc["blueHits"] = blueHits;
 
             serializeJson(doc, json);
 
@@ -148,8 +151,15 @@ void loop() {
             int httpCode = http.POST(json);     // Send the request
             String payload = http.getString();  // Get the response payload
 
-            // Serial.println(httpCode);   //Print HTTP return code
+            //Serial.println(httpCode);   //Print HTTP return code
             // Serial.println(payload);    //Print request response payload
+            if(httpCode != 200) {
+              toggleGreenLED();
+            } else {
+              digitalWrite(RED_PIN, LOW);
+              orangeHits = 0;
+              blueHits = 0;
+            }
 
             http.end();  // Close connection
         } else {
@@ -159,4 +169,8 @@ void loop() {
         timestamp = millis();
     }
     updateLED();
+}
+
+void toggleGreenLED() {
+  digitalWrite(RED_PIN, !digitalRead(RED_PIN));
 }
