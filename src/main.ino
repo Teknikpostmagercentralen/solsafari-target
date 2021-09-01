@@ -5,7 +5,10 @@
 #include <IRrecv.h>
 #include <IRremoteESP8266.h>
 #include <IRutils.h>
-#include "SerialMP3Player.h"
+#include <DFPlayerMini_Fast.h>
+#include <SoftwareSerial.h>
+
+
 
 #define NO_SERIALMP3_DELAY //disable delays in mp3 SerialMP3Player library
 
@@ -26,7 +29,11 @@
 
 #define BLINK_DELAY 500
 
-SerialMP3Player mp3(MP3_RX, MP3_TX);
+//SerialMP3Player mp3(MP3_RX, MP3_TX);
+DFPlayerMini_Fast mp3;
+SoftwareSerial mp3Serial(MP3_RX, MP3_TX); // RX, TX
+
+
 
 // An IR detector/demodulator is connected to GPIO pin 14(D5 on a NodeMCU
 // board).
@@ -68,9 +75,13 @@ void setup() {
     Serial.print(kRecvPin2);
 
     // Start Mp3 lib
-    mp3.begin(9600);                     // start mp3-communication
+    //mp3.begin(9600);                     // start mp3-communication
+      mp3Serial.begin(9600);
+      mp3.begin(mp3Serial, true);
+
     delay(500);                          // wait for init
-    mp3.sendCommand(CMD_SEL_DEV, 0, 2);  // select sd-card
+    mp3.volume(30); //set volume max
+    //mp3.sendCommand(CMD_SEL_DEV, 0, 2);  // select sd-card
     delay(500);                          // wait for init
 }
 
