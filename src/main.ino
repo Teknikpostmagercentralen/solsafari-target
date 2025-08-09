@@ -8,15 +8,13 @@
 #include <DFPlayerMini_Fast.h>
 #include <SoftwareSerial.h>
 
-
-
 #define NO_SERIALMP3_DELAY //disable delays in mp3 SerialMP3Player library
 
+// MP3 Player
 #define MP3_TX 12
 #define MP3_RX 13
 
 #define POST_INTERVAL 2000  // Wait between
-
 
 #define kRecvPin2 14
 
@@ -76,8 +74,8 @@ void setup() {
 
     // Start Mp3 lib
     //mp3.begin(9600);                     // start mp3-communication
-      mp3Serial.begin(9600);
-      mp3.begin(mp3Serial, true);
+    mp3Serial.begin(9600);
+    mp3.begin(mp3Serial, true);
 
     delay(500);                          // wait for init
     mp3.volume(30); //set volume max
@@ -159,12 +157,12 @@ void loop() {
             int httpCode = http.POST(json);     // Send the request
             String payload = http.getString();  // Get the response payload
 
-            //Serial.println(httpCode);   //Print HTTP return code
+            // Serial.println(httpCode);   //Print HTTP return code
             // Serial.println(payload);    //Print request response payload
             if(httpCode != 200) {
-              toggleGreenLED();
+              toggleErrorLED();
             } else {
-              digitalWrite(RED_PIN, LOW);
+              digitalWrite(RED_PIN, LOW); // Turn off error LED
               orangeHits = 0;
               blueHits = 0;
             }
@@ -179,6 +177,6 @@ void loop() {
     updateLED();
 }
 
-void toggleGreenLED() {
+void toggleErrorLED() {
   digitalWrite(RED_PIN, !digitalRead(RED_PIN));
 }
