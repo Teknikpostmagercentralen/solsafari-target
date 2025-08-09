@@ -7,16 +7,15 @@
 #include <IRutils.h>
 #include <DFPlayerMini_Fast.h>
 #include <SoftwareSerial.h>
-
-
+#include <FastLED.h>
 
 #define NO_SERIALMP3_DELAY //disable delays in mp3 SerialMP3Player library
 
+// MP3 Player
 #define MP3_TX 12
 #define MP3_RX 13
 
 #define POST_INTERVAL 2000  // Wait between
-
 
 #define kRecvPin2 14
 
@@ -29,11 +28,16 @@
 
 #define BLINK_DELAY 500
 
+// FastLED
+#define FAST_LED_PIN D0     // D0 / GPIO16
+#define NUM_LEDS 8
+#define LED_TYPE WS2811
+
+CRGB leds[NUM_LEDS];
+
 //SerialMP3Player mp3(MP3_RX, MP3_TX);
 DFPlayerMini_Fast mp3;
 SoftwareSerial mp3Serial(MP3_RX, MP3_TX); // RX, TX
-
-
 
 // An IR detector/demodulator is connected to GPIO pin 14(D5 on a NodeMCU
 // board).
@@ -47,10 +51,18 @@ decode_results results2;
 int orangeHits = 0;
 int blueHits = 0;
 
-unsigned long timestamp = 0;
+unsigned long wifiTimestamp = 0;
+unsigned long ledUpdateTimestamp = 0;
+unsigned long ledUpdateDuration = 10;
 
-long redTimestamp = 0;
 long greenTimestamp = 0;
+
+//fastLED hit animation
+long hitTimestamp = 0;
+long hitInitialDuration = 80;
+long hitColorDuration = 500;   
+
+uint32_t lastColorHit = 0;  
 
 void setup() {
     Serial.begin(9600);
@@ -60,6 +72,14 @@ void setup() {
     pinMode(RED_PIN, OUTPUT);
     pinMode(BLUE_PIN, OUTPUT);
     pinMode(GREEN_PIN, OUTPUT);
+
+    //Fast LED
+    FastLED.addLeds<LED_TYPE, FAST_LED_PIN, GRB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+    FastLED.setBrightness(255);
+    FastLED.clear();
+    delay(5); // Give some time for the LEDs to clear
+    fill_solid(leds, NUM_LEDS, CRGB::Green);
+    FastLED.show();
 
     while (!Serial)  // Wait for the serial connection to be establised.
         delay(50);
@@ -76,8 +96,8 @@ void setup() {
 
     // Start Mp3 lib
     //mp3.begin(9600);                     // start mp3-communication
-      mp3Serial.begin(9600);
-      mp3.begin(mp3Serial, true);
+    mp3Serial.begin(9600);
+    mp3.begin(mp3Serial, true);
 
     delay(500);                          // wait for init
     mp3.volume(30); //set volume max
@@ -98,12 +118,16 @@ void checkWifiConnectionBlocking() {
         LOW);  // Set blue pin low so its disabled no matter where it ended
 }
 
-void bang() {
+void bang(uint32_t color) {
     mp3.play(1);
     blinkGreen();
-}
+    // fastLED hit animation
+    hitTimestamp = millis();
+    lastColorHit = color;
+    fill_solid(leds, NUM_LEDS, CRGB::White);
+    FastLED.show();
 
-void blinkRed() {}
+}
 
 void blinkGreen() {
     digitalWrite(GREEN_PIN, HIGH);
@@ -115,6 +139,22 @@ void updateLED() {
     if ((current - greenTimestamp) > BLINK_DELAY) {
         digitalWrite(GREEN_PIN, LOW);
     }
+    // fastLED hit animation. Changes color from white to color to black
+    if ((current - hitTimestamp) > hitColorDuration) { // after color duration the leds turns off
+        fill_solid(leds, NUM_LEDS, CRGB::Black);
+    }
+    else {
+        if ((current - hitTimestamp) > hitInitialDuration) {  // after initial duration the leds turns orange or blue depending on the last hit
+            if (lastColorHit == ORANGE_CODE) {
+                fill_solid(leds, NUM_LEDS, CRGB::OrangeRed);
+            } else if (lastColorHit == BLUE_CODE) {
+                fill_solid(leds, NUM_LEDS, CRGB::Blue);
+            } else {
+                fill_solid(leds, NUM_LEDS, CRGB::Black);
+            }
+        }
+    }
+    FastLED.show();
 }
 
 void loop() {
@@ -123,18 +163,18 @@ void loop() {
         decode_type_t type2 = results2.decode_type;
         if (type2 == RC5) {
             if (kommando2 == BLUE_CODE) {
-                bang();
+                bang(kommando2);
                 blueHits++;
             }
             if (kommando2 == ORANGE_CODE) {
-                bang();
+                bang(kommando2);
                 orangeHits++;
             }
         }
         irrecv2.resume();  // Receive the next value
     }
 
-    if (millis() - timestamp > 10000) {
+    if (millis() - wifiTimestamp > 10000) {
         if (WiFi.status() == WL_CONNECTED) {  // Check WiFi connection status
 
             HTTPClient http;  // Declare object of class HTTPClient
@@ -159,12 +199,12 @@ void loop() {
             int httpCode = http.POST(json);     // Send the request
             String payload = http.getString();  // Get the response payload
 
-            //Serial.println(httpCode);   //Print HTTP return code
+            // Serial.println(httpCode);   //Print HTTP return code
             // Serial.println(payload);    //Print request response payload
             if(httpCode != 200) {
-              toggleGreenLED();
+              toggleErrorLED();
             } else {
-              digitalWrite(RED_PIN, LOW);
+              digitalWrite(RED_PIN, LOW); // Turn off error LED
               orangeHits = 0;
               blueHits = 0;
             }
@@ -174,11 +214,14 @@ void loop() {
             Serial.println("Error in WiFi connection");
             checkWifiConnectionBlocking();
         }
-        timestamp = millis();
+        wifiTimestamp = millis();
     }
-    updateLED();
+    if (millis() - ledUpdateTimestamp > ledUpdateDuration) {
+        updateLED();
+        ledUpdateTimestamp = millis();
+    }
 }
 
-void toggleGreenLED() {
+void toggleErrorLED() {
   digitalWrite(RED_PIN, !digitalRead(RED_PIN));
 }
