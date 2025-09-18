@@ -30,7 +30,7 @@
 
 // FastLED
 #define FAST_LED_PIN D0     // D0 / GPIO16
-#define NUM_LEDS 8
+#define NUM_LEDS 16
 #define LED_TYPE WS2811
 
 CRGB leds[NUM_LEDS];
